@@ -1,0 +1,48 @@
+datasource db {
+  provider = "sqlite" 
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Caretaker {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  active      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  slots       TimeSlot[]
+  snapshots   PeriodSnapshot[]
+}
+
+model Period {
+  id          String           @id @default(uuid())
+  startDate   DateTime         @default(now())
+  endDate     DateTime?
+  createdAt   DateTime         @default(now())
+  slots       TimeSlot[]       
+  snapshots   PeriodSnapshot[]
+}
+
+model TimeSlot {
+  id              String     @id @default(uuid())
+  startTime       DateTime
+  endTime         DateTime
+  durationMinutes Int
+  caretakerId     String?
+  caretaker       Caretaker? @relation(fields: [caretakerId], references: [id])
+  periodId        String?
+  period          Period?    @relation(fields: [periodId], references: [id])
+  createdAt       DateTime   @default(now())
+}
+
+model PeriodSnapshot {
+  id           String    @id @default(uuid())
+  periodId     String
+  period       Period    @relation(fields: [periodId], references: [id])
+  caretakerId  String
+  caretaker    Caretaker @relation(fields: [caretakerId], references: [id])
+  totalMinutes Int
+  closedAt     DateTime  @default(now())
+}
