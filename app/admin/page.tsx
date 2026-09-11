@@ -10,6 +10,7 @@ import {
   closeAndResetPeriod,
   logoutAdmin,
 } from '../actions';
+import AddSlotForm from './AddSlotForm';
 
 export default async function AdminDashboard() {
   if (!(await isAdminAuthenticated())) {
@@ -52,29 +53,7 @@ export default async function AdminDashboard() {
       {/* CARICA NUOVO SLOT */}
       <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <h2 className="font-bold mb-3 text-slate-900">Aggiungi Slot Orario</h2>
-        <form
-          action={async (formData) => {
-            'use server';
-            const start = formData.get('start') as string;
-            const end = formData.get('end') as string;
-            if (start && end) await createTimeSlot(start, end);
-          }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-3"
-        >
-          <div>
-            <label className="text-xs text-slate-500 font-medium">Inizio turno</label>
-            <input type="datetime-local" name="start" required className="w-full border border-slate-300 rounded-lg p-2 text-sm mt-1 focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 font-medium">Fine turno</label>
-            <input type="datetime-local" name="end" required className="w-full border border-slate-300 rounded-lg p-2 text-sm mt-1 focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div className="flex items-end">
-            <button className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-2 rounded-lg text-sm font-semibold h-[42px]">
-              Salva Slot
-            </button>
-          </div>
-        </form>
+        <AddSlotForm />
       </section>
 
       {/* STATISTICHE ANNUALI */}
