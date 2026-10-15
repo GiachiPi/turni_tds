@@ -131,6 +131,23 @@ export async function fetchPeriodsHistory() {
   return getPeriodsHistory();
 }
 
+export async function deletePeriod(periodId: string) {
+  if (!(await isAdminAuthenticated())) throw new Error('Non autorizzato');
+
+  // Sicurezza: non permettere di cancellare il periodo attivo (endDate = null)
+  const period = await prisma.period.findUnique({ where: { id: periodId } });
+  if (!period) throw new Error('Periodo non trovato');
+  if (!period.endDate) throw new Error('Non puoi cancellare il periodo attivo');
+
+  await prisma.$transaction([
+    prisma.periodSnapshot.deleteMany({ where: { periodId } }),
+    prisma.timeSlot.deleteMany({ where: { periodId } }),
+    prisma.period.delete({ where: { id: periodId } }),
+  ]);
+
+  revalidatePath('/admin');
+}
+
 export async function loginAdmin(password: string) {
   if (password === process.env.ADMIN_PASSWORD) {
     await createAdminSession();

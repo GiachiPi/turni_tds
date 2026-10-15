@@ -8,6 +8,7 @@ import {
   toggleCaretakerActive,
   createTimeSlot,
   closeAndResetPeriod,
+  deletePeriod,
   logoutAdmin,
 } from '../actions';
 import AddSlotForm from './AddSlotForm';
@@ -127,12 +128,27 @@ export default async function AdminDashboard() {
                       {formatDateIt(period.startDate)} → {formatDateIt(period.endDate)}
                     </div>
                   </div>
-                  <a
-                    href={`/api/export-period/${period.id}`}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition whitespace-nowrap"
-                  >
-                    ⬇ Scarica turni (CSV)
-                  </a>
+                  <div className="flex gap-2">
+                    <a
+                      href={`/api/export-period/${period.id}`}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition whitespace-nowrap"
+                    >
+                      ⬇ Scarica turni (CSV)
+                    </a>
+                    <form action={async () => {
+                      'use server';
+                      await deletePeriod(period.id);
+                    }}>
+                      <button
+                        className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition whitespace-nowrap"
+                        onClick={(e) => {
+                          if (!confirm(`Eliminare definitivamente il periodo ${formatDateIt(period.startDate)} → ${formatDateIt(period.endDate)}?\nQuesta azione è irreversibile.`)) e.preventDefault();
+                        }}
+                      >
+                        🗑 Elimina
+                      </button>
+                    </form>
+                  </div>
                 </div>
                 {/* Ore per custode */}
                 {period.caretakers.length === 0 ? (
