@@ -29,10 +29,11 @@ export async function GET(
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      timeZone: 'Europe/Rome',
     });
 
   const formatTime = (d: Date) =>
-    new Date(d).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    new Date(d).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' });
 
   const periodStart = formatDate(period.startDate);
   const periodEnd = period.endDate ? formatDate(period.endDate) : 'in corso';
@@ -41,8 +42,8 @@ export async function GET(
   const csvHeader = 'Data;Giorno;Inizio;Fine;Durata (min);Custode';
   const rows = slots.map((s) => {
     const d = new Date(s.startTime);
-    const dayName = d.toLocaleDateString('it-IT', { weekday: 'long' });
-    const dateStr = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const dayName = d.toLocaleDateString('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' });
+    const dateStr = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Rome' });
     const startStr = formatTime(s.startTime);
     const endStr = formatTime(s.endTime);
     const caretakerName = s.caretaker?.name ?? '';
