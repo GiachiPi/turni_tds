@@ -1,5 +1,29 @@
 import { prisma } from './prisma';
 
+export async function getPeriodsHistory() {
+  const closedPeriods = await prisma.period.findMany({
+    where: { endDate: { not: null } },
+    orderBy: { startDate: 'desc' },
+    include: {
+      snapshots: {
+        include: { caretaker: true },
+      },
+    },
+  });
+
+  return closedPeriods.map((p) => ({
+    id: p.id,
+    startDate: p.startDate,
+    endDate: p.endDate!,
+    caretakers: p.snapshots.map((s) => ({
+      id: s.caretakerId,
+      name: s.caretaker.name,
+      totalMinutes: s.totalMinutes,
+      totalHours: (s.totalMinutes / 60).toFixed(1),
+    })),
+  }));
+}
+
 export async function getDashboardStats(year: number) {
   // STATISTICHE ANNUALI (Esistenti)
   const startOfYear = new Date(year, 0, 1);

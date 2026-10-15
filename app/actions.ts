@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { isAdminAuthenticated, createAdminSession, clearAdminSession } from '@/lib/auth';
+import { getPeriodsHistory } from '@/lib/stats';
 
 async function getOrCreateActivePeriod() {
   let active = await prisma.period.findFirst({ where: { endDate: null } });
@@ -78,32 +79,56 @@ export async function closeAndResetPeriod() {
   if (!(await isAdminAuthenticated())) throw new Error('Non autorizzato');
   const currentPeriod = await getOrCreateActivePeriod();
 
-  const bookedSlots = await prisma.timeSlot.findMany({
-    where: { periodId: currentPeriod.id, caretakerId: { not: null } },
+  // 1. Calcola le ore dei custodi per gli slot PASSATI (già avvenuti)
+  const now = new Date();
+  const bookedPastSlots = await prisma.timeSlot.findMany({
+    where: {
+      periodId: currentPeriod.id,
+      caretakerId: { not: null },
+      startTime: { lte: now },
+    },
   });
 
   const totalsByCaretaker: Record<string, number> = {};
-  for (const slot of bookedSlots) {
+  for (const slot of bookedPastSlots) {
     if (slot.caretakerId) {
       totalsByCaretaker[slot.caretakerId] = (totalsByCaretaker[slot.caretakerId] || 0) + slot.durationMinutes;
     }
   }
 
+  // 2. Salva snapshot ore per ogni custode
   for (const [cId, total] of Object.entries(totalsByCaretaker)) {
     await prisma.periodSnapshot.create({
       data: { periodId: currentPeriod.id, caretakerId: cId, totalMinutes: total },
     });
   }
 
-  const now = new Date();
+  // 3. Chiudi il periodo attuale
   await prisma.period.update({
     where: { id: currentPeriod.id },
     data: { endDate: now },
   });
 
-  await prisma.period.create({ data: { startDate: now } });
+  // 4. Crea il nuovo periodo
+  const newPeriod = await prisma.period.create({ data: { startDate: now } });
+
+  // 5. Migra gli slot FUTURI (non ancora avvenuti) al nuovo periodo
+  //    così rimangono visibili ai custodi senza essere eliminati
+  await prisma.timeSlot.updateMany({
+    where: {
+      periodId: currentPeriod.id,
+      startTime: { gt: now },
+    },
+    data: { periodId: newPeriod.id },
+  });
+
   revalidatePath('/');
   revalidatePath('/admin');
+}
+
+export async function fetchPeriodsHistory() {
+  if (!(await isAdminAuthenticated())) throw new Error('Non autorizzato');
+  return getPeriodsHistory();
 }
 
 export async function loginAdmin(password: string) {

@@ -1,7 +1,7 @@
 import { isAdminAuthenticated } from '../../lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '../../lib/prisma';
-import { getDashboardStats } from '../../lib/stats';
+import { getDashboardStats, getPeriodsHistory } from '../../lib/stats';
 import Link from 'next/link';
 import {
   addCaretaker,
@@ -12,6 +12,14 @@ import {
 } from '../actions';
 import AddSlotForm from './AddSlotForm';
 
+function formatDateIt(date: Date) {
+  return new Date(date).toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 export default async function AdminDashboard() {
   if (!(await isAdminAuthenticated())) {
     redirect('/admin/login');
@@ -19,6 +27,7 @@ export default async function AdminDashboard() {
 
   const caretakers = await prisma.caretaker.findMany({ orderBy: { name: 'asc' } });
   const stats = await getDashboardStats(new Date().getFullYear());
+  const periodsHistory = await getPeriodsHistory();
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6 pb-16 bg-slate-50 min-h-screen">
@@ -41,7 +50,11 @@ export default async function AdminDashboard() {
       <section className="bg-amber-50 border border-amber-300 p-5 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="font-bold text-amber-900">Chiusura Periodo e Reset Ore</h2>
-          <p className="text-xs text-amber-700 mt-1">Salva lo storico ore e azzera il conteggio visibile ai custodi.</p>
+          <p className="text-xs text-amber-700 mt-1">
+            Salva lo storico ore, azzera il conteggio e migra i turni futuri al nuovo periodo.
+            <br />
+            <span className="font-semibold">I turni già prenotati rimangono intatti e visibili.</span>
+          </p>
         </div>
         <form action={closeAndResetPeriod}>
           <button className="bg-amber-600 hover:bg-amber-700 transition text-white font-bold px-4 py-2 rounded-lg text-sm whitespace-nowrap">
@@ -93,6 +106,55 @@ export default async function AdminDashboard() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* STORICO ORE PER PERIODO */}
+      <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <h2 className="font-bold mb-4 text-slate-900">Storico Periodi</h2>
+        {periodsHistory.length === 0 ? (
+          <p className="text-sm text-slate-500 italic">
+            Nessun periodo chiuso ancora. Lo storico apparirà qui dopo il primo azzeramento.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {periodsHistory.map((period) => (
+              <div key={period.id} className="border border-slate-200 rounded-xl overflow-hidden">
+                {/* Header periodo */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 px-4 py-3 border-b border-slate-200 gap-2">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Periodo</span>
+                    <div className="font-semibold text-slate-800 text-sm mt-0.5">
+                      {formatDateIt(period.startDate)} → {formatDateIt(period.endDate)}
+                    </div>
+                  </div>
+                  <a
+                    href={`/api/export-period/${period.id}`}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition whitespace-nowrap"
+                  >
+                    ⬇ Scarica turni (CSV)
+                  </a>
+                </div>
+                {/* Ore per custode */}
+                {period.caretakers.length === 0 ? (
+                  <div className="px-4 py-3 text-xs text-slate-400 italic">
+                    Nessun turno registrato in questo periodo.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {[...period.caretakers]
+                      .sort((a, b) => b.totalMinutes - a.totalMinutes)
+                      .map((c) => (
+                        <div key={c.id} className="flex justify-between items-center px-4 py-2.5 hover:bg-slate-50 transition">
+                          <span className="text-sm font-medium text-slate-800">{c.name}</span>
+                          <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg">{c.totalHours} h</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* GESTIONE CUSTODI */}
