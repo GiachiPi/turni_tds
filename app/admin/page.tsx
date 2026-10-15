@@ -12,6 +12,7 @@ import {
   logoutAdmin,
 } from '../actions';
 import AddSlotForm from './AddSlotForm';
+import DeletePeriodButton from './DeletePeriodButton';
 
 function formatDateIt(date: Date) {
   return new Date(date).toLocaleDateString('it-IT', {
@@ -135,19 +136,10 @@ export default async function AdminDashboard() {
                     >
                       ⬇ Scarica turni (CSV)
                     </a>
-                    <form action={async () => {
-                      'use server';
-                      await deletePeriod(period.id);
-                    }}>
-                      <button
-                        className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition whitespace-nowrap"
-                        onClick={(e) => {
-                          if (!confirm(`Eliminare definitivamente il periodo ${formatDateIt(period.startDate)} → ${formatDateIt(period.endDate)}?\nQuesta azione è irreversibile.`)) e.preventDefault();
-                        }}
-                      >
-                        🗑 Elimina
-                      </button>
-                    </form>
+                    <DeletePeriodButton
+                      periodId={period.id}
+                      label={`${formatDateIt(period.startDate)} → ${formatDateIt(period.endDate)}`}
+                    />
                   </div>
                 </div>
                 {/* Ore per custode */}
